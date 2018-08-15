@@ -43,7 +43,6 @@ def loancf(nperiods, debt0, lfee, repprem, totamort):
     cf = np.zeros(nperiods)
     cf[0] = debt0*(1 - lfee)
     cf[-1] = -(debt0*repprem + totamort)
-    print(debt0*repprem)
     return cf
 
 def debtcf(nperiods, debt0, aintrate, aperiod):
@@ -78,3 +77,25 @@ def interestcf(D, r0, dates, libor):
         dt = (dates[i] - dates[i-1]).days
         interest[i] = D[i]*dt*(r0 + libor[i])/360.
     return -interest
+
+def portloancf(emonths, alD0, lfee, repprem, D):
+    totperiods = np.max(emonths) + 1
+    cf = np.zeros(totperiods)
+    cf[0] = D[1]*(1 - lfee)
+    for i in range(totperiods):
+        w = np.where(np.asarray(emonths) == i)[0]
+        if len(w) != 0:
+            tentcf = np.sum([repprem*alD0[j] for j in w])
+            if i != totperiods - 1:
+                if tentcf < D[i]:
+                    D[i + 1:] = D[i] - tentcf
+                    cf[i] = -tentcf
+                else:
+                    cf[i] = -D[i]
+                    D[i + 1:] = 0
+            else:
+                if tentcf > D[i]:
+                    cf[i] = -D[i]
+                else:
+                    print('Error')
+    return [cf, D]

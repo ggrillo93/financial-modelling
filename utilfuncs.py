@@ -2,6 +2,7 @@ import numpy as np
 import scipy.optimize as op
 from moneyed.localization import format_money
 from moneyed import Money
+from re import sub
 
 def xnpv(rate, cash, time):
     """ Calculates the net present value of a sequence of (possibly) unevenly spaced cashflows.
@@ -24,7 +25,25 @@ def xirr(dates, cf):
 
 def convtomoney(arr):
     """ Converts array of floats/integers into an array of formatted money objects. """
-    monarr = []
-    for amount in arr:
-        monarr.append(format_money(Money(amount = str(amount), currency = 'USD'), locale = 'en_US'))
-    return monarr
+    floatarr = np.array(arr)
+    flat = floatarr.flatten()
+    nelem = len(flat)
+    dim = floatarr.shape
+    monarr = np.zeros(nelem, dtype = object)
+    for i in range(nelem):
+        monarr[i] = format_money(Money(amount = str(flat[i]), currency = 'USD'), locale = 'en_US')
+    return monarr.reshape(dim)
+
+def convtofloat(arr):
+    """ Converts array of money objects into array of floats. """
+    monarr = np.array(arr)
+    flat = monarr.flatten()
+    nelem = len(flat)
+    dim = monarr.shape
+    floatarr = np.zeros(nelem, dtype = object)
+    for i in range(nelem):
+        if flat[i][0] == '-':
+            floatarr[i] = -float(sub(r'[^\d.]', '', flat[i]))
+        else:
+            floatarr[i] = float(sub(r'[^\d.]', '', flat[i]))
+    return floatarr.reshape(dim)

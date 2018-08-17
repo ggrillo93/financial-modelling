@@ -1,7 +1,7 @@
 from itemizedcf import *
 from IPython.display import display
 
-def singlepropcf(sdate, bcap, scap, emonth, fyrrent, rentinc, incperiod, ltv, lfee, r0, libor, acost, ecost, fyroexp, oexpinc, aperiod, aintrate, repprem):
+def singlepropcf(sdate, bcap, scap, emonth, fyrrent, rentinc, incperiod, ltv, lfee, r0, libor, acost, ecost, fyroexp, oexpinc, aperiod, aintrate, repprem, expdate):
     """ Returns the relevant cashflows for a single property.
         Inputs: sdate = Date of purchase
                 bcap = Buy cap rate
@@ -31,7 +31,7 @@ def singlepropcf(sdate, bcap, scap, emonth, fyrrent, rentinc, incperiod, ltv, lf
     pprice = fyrrent/bcap # Purchase price
 
     # Rent cash flow
-    rent = rentcf(fyrrent, rentinc, incperiod, nperiods)
+    rent = rentcf(fyrrent, rentinc, incperiod, dates, expdate.month)
 
     sprice = rent[-2]*12/scap # Sell price
 
@@ -53,7 +53,7 @@ def singlepropcf(sdate, bcap, scap, emonth, fyrrent, rentinc, incperiod, ltv, lf
 
     return [dates, loan, prop, rent, oexpenses, interest, amort, debt, rent + prop + amort + oexpenses + loan + interest]
 
-def portcf(names, sdate, bcaps, scaps, emonths, fyrrents, rentincs, incperiods, ltvs, lfee, r0, libor, acosts, ecosts, fyroexps, oexpincs, aperiod, aintrate, repprem):
+def portcf(names, sdate, bcaps, scaps, emonths, fyrrents, rentincs, incperiods, ltvs, lfee, r0, libor, acosts, ecosts, fyroexps, oexpincs, aperiod, aintrate, repprem, expdates):
     """ Returns the cashflow per month for a portfolio of properties.
     Inputs: sdate = date of first cashflow from portfolio
             bcaps = list/array with the buying cap rates for each of the properties
@@ -72,7 +72,8 @@ def portcf(names, sdate, bcaps, scaps, emonths, fyrrents, rentincs, incperiods, 
             oexpincs = list/array with the percentage annual increase of the operating expenses
             aperiod = loan amortization period
             aintrate = amortization interest rate
-            repprem = repayment premium """
+            repprem = repayment premium
+            expdates = lease expiration dates for each of the properties """
 
     nprop = len(bcaps)
     totperiods = np.max(emonths) + 1
@@ -91,14 +92,12 @@ def portcf(names, sdate, bcaps, scaps, emonths, fyrrents, rentincs, incperiods, 
     for i in range(nprop):
         emonth = emonths[i]
         nperiods = emonth + 1
-        # cf = singlepropcf(alldates[0], bcaps[i], scaps[i], emonths[i], fyrrents[i], rentincs[i], incperiods[i], ltvs[i], lfee, r0, libor, acosts[i], ecosts[i], fyroexps[i], oexpincs[i], np.inf, 0., repprem)
-        # Construct cashflow for single property in a portfolio
         dates = alldates[:nperiods]
-        rent = rentcf(fyrrents[i], rentincs[i], incperiods[i], nperiods)
-        sprice = rent[-2]*12/scaps[i]
+        rent = rentcf(fyrrents[i], rentincs[i], incperiods[i], dates, expdates[i].month)
+        sprice = rent[-1]*12/scaps[i]
+        rent[-1] = 0
         prop = buysell(nperiods, P0[i], sprice, ecosts[i], acosts[i])
-        oexpenses = -rentcf(fyroexps[i], oexpincs[i], 1, nperiods)
-        # loan = loancf(nperiods, ltvs[i]*P0[i], lfee, repprem, 0)
+        oexpenses = -rentcf(fyroexps[i], oexpincs[i], 1, dates, expdates[i].month)
 
         # Create dataframe for single property
         spitemcf = [prop, rent, oexpenses]
@@ -108,10 +107,6 @@ def portcf(names, sdate, bcaps, scaps, emonths, fyrrents, rentincs, incperiods, 
         if nperiods != totperiods:
             totcf = np.pad(totcf, ((0, totperiods - nperiods)), 'constant')
         propcf[i] = totcf
-
-    # zerod = np.where(D == 0)
-    # if len(zerod) > 2:
-    #     A[np.where(D == 0)[2]:] = 0
 
     loanpay, D = portloancf(emonths, alD0, lfee, repprem, D)
     interest = interestcf(D, r0, alldates, libor)

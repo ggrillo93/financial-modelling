@@ -1,7 +1,7 @@
 from utilfuncs import *
 import pandas as pd
 
-def rentcf(fyrrent, rentinc, incperiod, nperiods):
+def rentcf(fyrrent, rentinc, incperiod, dates, expmonth):
     """ Returns the cash flow for the rent of a single property.
     Inputs: fyrrent = First year rent
             rentinc = Percentage rent increase per period
@@ -10,9 +10,17 @@ def rentcf(fyrrent, rentinc, incperiod, nperiods):
 
     # TO DO: - Add months for forward rent
 
+    nperiods = len(dates)
     rent = np.zeros(nperiods)
+    styear = dates[0].year
+    rent[1] = fyrrent/12.
+    # for i in range(1, nperiods - 1):
+    #     rent[i] = fyrrent*(1 + rentinc)**np.floor((i - 1)/(12.*incperiod))/12.
     for i in range(1, nperiods - 1):
-        rent[i] = fyrrent*(1 + rentinc)**np.floor((i - 1)/(12.*incperiod))/12.
+        if expmonth == dates[i].month and (dates[i].year - styear)%incperiod == 0:
+            rent[i+1] = rent[i]*(1+rentinc)
+        else:
+            rent[i+1] = rent[i]
     return rent
 
 def buysell(nperiods, pprice, sprice, ecost, acost):
@@ -79,6 +87,13 @@ def interestcf(D, r0, dates, libor):
     return -interest
 
 def portloancf(emonths, alD0, lfee, repprem, D):
+    """ Returns the cashflow related to the loan payments of a portfolio.
+    Inputs: emonths = exit month of each of the portfolio's properties.
+            alD0 = allocated loan amount for each of the portfolio's properties.
+            lfee = loan fee as a percentage
+            repprem = repayment premium
+            D = amortized debt """
+
     totperiods = np.max(emonths) + 1
     cf = np.zeros(totperiods)
     cf[0] = D[1]*(1 - lfee)

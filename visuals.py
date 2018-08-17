@@ -10,7 +10,7 @@ def viewret(inflow, outflow, profit, moic, irr):
                 irr = Internal Rate of Return """
 
     monarrs = [inflow, -outflow, profit]
-    resultarr = convtomoney(monarrs) + [moic, irr] # Correctly format money numbers
+    resultarr = np.hstack([convtomoney(monarrs), [np.around(moic, 3), str(np.around(irr*100, 3)) + '%']]) # Correctly format money numbers
     resultlab = ['Inflow', 'Outflow', 'Profit', 'MOIC', 'IRR']
     results = pd.DataFrame(resultarr, index = resultlab, columns = ['Value'])
     results.columns.name = 'Returns'
@@ -40,21 +40,14 @@ def viewportcf(names, alldates, amort, propcf, interest, loanpay, debt):
             allcf = individual cashflow per period for each of the properties
             alldates = all dates at which portfolio cashflows take place """
 
-
-    row = [np.arange(len(debt)), alldates.date]
+    rows = np.array([np.arange(len(debt)), alldates.date])
     totpropcf = np.sum(propcf, axis = 0)
-    totcf = totpropcf + amort + interest
+    totcf = totpropcf + amort + interest + loanpay
     Df = debt + amort + loanpay
     Df[0] = debt[1]
-    row.append(convtomoney(debt))
-    row.append(convtomoney(amort))
-    for arr in propcf:
-        row.append(convtomoney(arr))
-    row.append(convtomoney(interest))
-    row.append(convtomoney(loanpay))
-    row.append(convtomoney(Df))
-    row.append(convtomoney(totcf))
+    moneys = np.vstack([debt, amort, propcf, interest, loanpay, Df, totcf])
+    rows = np.vstack([rows, convtomoney(moneys)])
     rowlabels = ['Month #', 'Dates', 'Starting debt', 'Amortization'] + names + ['Interest payment', 'Loan cashflow from buy/sell', 'Final debt', 'Total cash flow']
-    df = pd.DataFrame(row, index = rowlabels, columns = ['']*len(debt))
+    df = pd.DataFrame(rows, index = rowlabels, columns = ['']*len(debt))
     # df.columns.name = 'Month #'
     return df

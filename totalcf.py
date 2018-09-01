@@ -40,7 +40,7 @@ def singlepropcf(sdate, bcap, scap, emonth, fyrrent, rentinc, incperiod, ltv, lf
 
     # Debt evolution and amortization cashflow
     debt0 = ltv*pprice
-    amort, debt = debtcf(nperiods, debt0, aintrate, aperiod)
+    amort, debt = debtcf(nperiods, aintrate, debt0, r0, aperiod)
 
     # Operating expenses cash flow
     oexpenses = -rentcf(fyroexp, oexpinc, 1, nperiods) # same formula as rent
@@ -53,7 +53,7 @@ def singlepropcf(sdate, bcap, scap, emonth, fyrrent, rentinc, incperiod, ltv, lf
 
     return [dates, loan, prop, rent, oexpenses, interest, amort, debt, rent + prop + amort + oexpenses + loan + interest]
 
-def portcf(names, sdate, bcaps, scaps, emonths, fyrrents, rentincs, incperiods, ltvs, lfee, r0, libor, acosts, ecosts, fyroexps, oexpincs, aperiod, aintrate, repprem, expdates):
+def portcf(names, sdate, bcaps, scaps, emonths, fyrrents, rentincs, incperiods, fyrincs, ltvs, lfee, r0, libor, acosts, ecosts, fyroexps, oexpincs, aperiod, aintrate, repprem, expdates, show = True):
     """ Returns the cashflow per month for a portfolio of properties.
     Inputs: sdate = date of first cashflow from portfolio
             bcaps = list/array with the buying cap rates for each of the properties
@@ -61,6 +61,7 @@ def portcf(names, sdate, bcaps, scaps, emonths, fyrrents, rentincs, incperiods, 
             emonths = list/array with the exit months for each of the properties
             fyrrents = list/array with the first year rents for each of the properties
             rentincs = list/array with the percentage rent increase per period for each of the properties
+            fyrinc = number of years after acquisition for first rent increase
             ltvs = list/array with the leverage for each of the properties
             lfee = loan fee as a percentage of the initial loan
             r0 = fixed annual interest rate of the loan
@@ -93,16 +94,17 @@ def portcf(names, sdate, bcaps, scaps, emonths, fyrrents, rentincs, incperiods, 
         emonth = emonths[i]
         nperiods = emonth + 1
         dates = alldates[:nperiods]
-        rent = rentcf(fyrrents[i], rentincs[i], incperiods[i], dates, expdates[i].month)
+        rent = rentcf(fyrrents[i], fyrincs[i], rentincs[i], incperiods[i], dates, expdates[i].month)
         sprice = rent[-1]*12/scaps[i]
-        rent[-1] = 0
+        # rent[-1] = 0
         prop = buysell(nperiods, P0[i], sprice, ecosts[i], acosts[i])
-        oexpenses = -rentcf(fyroexps[i], oexpincs[i], 1, dates, expdates[i].month)
+        oexpenses = -rentcf(fyroexps[i], 1, oexpincs[i], 1, dates, expdates[i].month)
 
         # Create dataframe for single property
         spitemcf = [prop, rent, oexpenses]
         totcf = np.sum(spitemcf, axis = 0)
-        display(viewsinglecfport(names[i], dates, prop, rent, oexpenses, totcf))
+        if show:
+            display(viewsinglecfport(names[i], dates, prop, rent, oexpenses, totcf))
 
         if nperiods != totperiods:
             totcf = np.pad(totcf, ((0, totperiods - nperiods)), 'constant')

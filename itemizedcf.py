@@ -1,7 +1,7 @@
 from utilfuncs import *
 import pandas as pd
 
-def rentcf(fyrrent, rentinc, incperiod, dates, expmonth):
+def rentcf(fyrrent, fincyr, rentinc, incperiod, dates, expmonth):
     """ Returns the cash flow for the rent of a single property.
     Inputs: fyrrent = First year rent
             rentinc = Percentage rent increase per period
@@ -12,12 +12,11 @@ def rentcf(fyrrent, rentinc, incperiod, dates, expmonth):
 
     nperiods = len(dates)
     rent = np.zeros(nperiods)
-    styear = dates[0].year
+    styear = dates[0].year + fincyr
+    # print(styear)
     rent[1] = fyrrent/12.
-    # for i in range(1, nperiods - 1):
-    #     rent[i] = fyrrent*(1 + rentinc)**np.floor((i - 1)/(12.*incperiod))/12.
     for i in range(1, nperiods - 1):
-        if expmonth == dates[i].month and (dates[i].year - styear)%incperiod == 0:
+        if expmonth == dates[i].month +1 and (dates[i].year - styear)%incperiod == 0 and (dates[i].year - styear) >= 0:
             rent[i+1] = rent[i]*(1+rentinc)
         else:
             rent[i+1] = rent[i]
@@ -53,7 +52,7 @@ def loancf(nperiods, debt0, lfee, repprem, totamort):
     cf[-1] = -(debt0*repprem + totamort)
     return cf
 
-def debtcf(nperiods, debt0, aintrate, aperiod):
+def debtcf(nperiods, aintrate, debt0, r0, aperiod):
     """ Returns the cashflow related to the debt repayment of the loan and the evolution of the debt balance as a function of time
     Inputs: nperiods = number of cashflow periods (in months)
             debt0 = starting loan/debt
@@ -64,10 +63,10 @@ def debtcf(nperiods, debt0, aintrate, aperiod):
     A0 = np.pmt(aintrate, aperiod, debt0) # Base amortization payment per period
     D[1] = debt0 # D[0] = 0 because no debt balance at month 0
     for i in range(2, nperiods):
-        D[i] = (D[i-1] - A0)/(1 - aintrate)
+        D[i] = (D[i-1] - A0)/(1 - r0)
     A = np.zeros(nperiods)
     for i in range(1, nperiods):
-        A[i] = A0 - D[i]*aintrate # could be A = A0 + D*aintrate too
+        A[i] = A0 - D[i]*r0 # could be A = A0 + D*aintrate too
     return [-A, D]
 
 def interestcf(D, r0, dates, libor):
